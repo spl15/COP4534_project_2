@@ -42,6 +42,7 @@ int main()
     p_queue my_pq;
     float myTime;
     int availableServers;
+    customer* temp;
 
     // to seed a random time varibale
     srand(time(0));
@@ -64,24 +65,24 @@ int main()
     availableServers = servers; 
     while(n > 0)
     {   
-        customer* myGuy = new customer();
-        myGuy = my_pq.pop();
+        //customer* myGuy = new customer();
+        temp = my_pq.pop();
         // if the event was an arrival
-        if(!myGuy->hasArrived)
+        if(!temp->hasArrived)
         {
             // if there are serveres available
             if(availableServers > 0)
             {
                 --availableServers;
-                myGuy->startOfService = myGuy.head->arrivalTime;
+                temp->startOfService = temp->arrivalTime;
                 serviceTime = getNextRandomInterval(mu);
-                myGuy->departTime = myGuy->startOfService + serviceTime;
-                myGuy->hasArrived = true;
-                my_pq.insert(myGuy);
+                temp->departTime = myGuy->startOfService + serviceTime;
+                temp->hasArrived = true;
+                my_pq.insert(temp);
             } // else place customer in fifo queue
             else
             {
-                fifo_queue.push(myGuy);                
+                fifo_queue.push(temp);                
             }
             
         } // else it was a departure
