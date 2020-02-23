@@ -73,7 +73,7 @@ int main()
     availableServers = servers; 
 
 
-    while(count < (n * 2)) //EDIT!!
+    while(customersInSystem > 0) 
     {   cout << ++count << endl;
         //customer* myGuy = new customer();
         temp = my_pq.pop();
