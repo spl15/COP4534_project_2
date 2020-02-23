@@ -7,9 +7,9 @@
 #include "customer.hpp"
 customer::customer()
 {
-    this->arrivalTime = -1;
-    this->departTime = -1;
+    this->arrivalTime = 0;
+    this->departTime = 0;
     this->hasArrived = false;
-    this->startOfService = -1;
+    this->startOfService = 0;
     this->nextCustomer = NULL;
 }

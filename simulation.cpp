@@ -16,7 +16,8 @@ float getCustomerTime(float, float);
 float getCustomersInQueue(float, float, float);
 float getRho(float, float, float);
 float getNextRandomInterval(int);
-void showResults();
+void showResults(int*,int*,int*,float*,float*,float*,float*,float*);
+//void processStats(customer*);
 
 
 // so i dont have to type std:: every time
@@ -30,6 +31,7 @@ int main()
 
     // needed value for the stats
     int n; // number of arrivals to simulate
+    int customersInSystem;
     int lambda; // average arrivals in a time period
     int mu;  // the average number served in a time period
     int servers;  // number of servers
@@ -38,11 +40,18 @@ int main()
     float idleTime = 0.0; // the time when no one is in the system
     float waitedInLineTime = 0.0; // time spent waiting in line
     float serviceTime;  // time a customer spends getting service
-    std::queue<customer*> fifo_queue;
-    p_queue my_pq;
-    float myTime;
-    int availableServers;
+    std::queue<customer*> fifo_queue; // fifo queue simulates people in the line
+    p_queue my_pq; // priority queue that holds arrival and depare events
+    float myTime; // the interval time for a customer
+    int availableServers; // the amount of servers are are free
     customer* temp;
+    customer* lastDepart = NULL;
+    customer* nextInLine;
+    int remainingCustomers; // remaining customers to be processed
+    int waitedInQueue = 0;
+    float timeInSim;
+    int i;
+    int count = 0;
 
     // to seed a random time varibale
     srand(time(0));
@@ -50,52 +59,152 @@ int main()
     prompt(&n,&lambda,&mu,&servers);
     //display statistical results
     displayStats(&lambda, &mu, &servers);
-    
-    //put max numver of arrivals in the queue
-    int i;
+    customersInSystem = n;
+    //put max number of arrivals in the queue
+
     for(i = 0;i<my_pq.MAXSIZE;i++)
     {
         myTime = getNextRandomInterval(lambda);
-
         customer* newGuy = new customer();
         newGuy->arrivalTime = simTime + myTime;
         simTime += myTime;
         my_pq.insert(newGuy);
     }
     availableServers = servers; 
-    while(n > 0)
-    {   
+
+
+    while(count < (n * 2)) //EDIT!!
+    {   cout << ++count << endl;
         //customer* myGuy = new customer();
         temp = my_pq.pop();
         // if the event was an arrival
         if(!temp->hasArrived)
-        {
+        {   if((availableServers == servers) && (lastDepart != NULL))
+            {   
+                idleTime = idleTime + (temp->arrivalTime - lastDepart->departTime);
+            }
             // if there are serveres available
             if(availableServers > 0)
-            {
+            {   
                 --availableServers;
+                
                 temp->startOfService = temp->arrivalTime;
-                serviceTime = getNextRandomInterval(mu);
-                temp->departTime = myGuy->startOfService + serviceTime;
+                myTime = getNextRandomInterval(mu);
+                serviceTime = serviceTime + myTime;
+                
+                temp->departTime = temp->startOfService + myTime;
                 temp->hasArrived = true;
                 my_pq.insert(temp);
             } // else place customer in fifo queue
             else
             {
+                //cout << ++count << endl;
                 fifo_queue.push(temp);                
             }
             
         } // else it was a departure
         else
         {
+            lastDepart = temp;
+            ++availableServers;
+            --customersInSystem;
+            if(temp->arrivalTime != temp->startOfService)
+            {
+                waitedInQueue++;
+                waitedInLineTime = waitedInLineTime + (temp->startOfService - temp->arrivalTime);
+            }
+            timeInSim = timeInSim + (temp->departTime - temp->arrivalTime);
             
+            
+            // if the fifo is not empty add a customer to the PQ from the fifo
+            if(!fifo_queue.empty())
+            {
+                //remove customer from fifo queue
+                nextInLine = fifo_queue.front();
+                fifo_queue.pop();
+
+                // add the customers approiate times
+                myTime = getNextRandomInterval(mu);
+                
+                serviceTime = serviceTime + myTime;
+                //cout << serviceTime << endl;
+                nextInLine->startOfService = temp->departTime;
+                nextInLine->departTime = nextInLine->startOfService + myTime;
+                nextInLine->hasArrived = true;
+                --availableServers;
+                my_pq.insert(nextInLine);
+            }
+            //delete temp;
         }
-        
-    
+        // if there are more arrivals to be processed and 
+        // there are only at most servers + 1 people in priority queue
+        // process more poeple
+        if((my_pq.currentSize <= (servers+1)) && (customersInSystem > 0))
+        {
+            if(customersInSystem >= my_pq.MAXSIZE)
+            {
+                //fills up the priority queue until its "full"
+                remainingCustomers = (my_pq.MAXSIZE - my_pq.currentSize);
+            }
+            else
+            {
+                remainingCustomers = customersInSystem - (servers + 1);
+            }
+            
+            for(i = 0; i < remainingCustomers; i++)
+            {   
+                myTime = getNextRandomInterval(lambda);
+                customer* newGuy = new customer();
+                newGuy->arrivalTime = simTime + myTime;
+                simTime += myTime;
+                my_pq.insert(newGuy);
+            }
+        }
+
+
     }
+    
+    showResults(&n, &servers, &waitedInQueue, &simTime, &idleTime, &timeInSim, &serviceTime, &waitedInLineTime);
+    /*cout <<  "numcustomers: " << n << endl;
+    cout <<  "servers: " << servers << endl;
+    cout <<  "num waited in queue: " << waitedInQueue << endl;
+    cout <<  "sim time: " << simTime << endl;
+    cout <<  "idel time: " << idleTime << endl;
+    cout <<  "time spent in sim: " << timeInSim << endl;
+    cout << "service time: "  << serviceTime << endl;
+    cout <<  "waited in line time: " << waitedInLineTime << endl;
+
+*/
+
 
 
     return 0;
+}
+void showResults(int* numCustomers, int* numServers, int* numWaited, float* sim, float* idle, float* inSystem, float* serveTime, float* timeInLine)
+{
+    cout << "Here are the simulated results:" << endl;
+
+    cout << "The percent of idle time of the system:  ";
+    cout <<  ((*idle / *sim) * 100.0) << endl;
+
+    cout << "The average time a customer spends in the system:  ";
+    cout << (*inSystem / *numCustomers) << endl;
+
+    cout << "The average time a customer spends waiting in the queue:  ";
+    
+    if(*numWaited != 0)
+    {
+        cout << (*timeInLine / *numWaited) << endl;
+    }
+    else
+    {
+        cout << "0" << endl;
+    }
+    
+    cout << "The utilization factor for the system:  ";
+    cout << ((*serveTime) / ((*numServers) * (*sim))) << endl;
+
+
 }
 void prompt(int* myN,int* myLambda, int* myMu, int* myServers)
 {
@@ -215,7 +324,7 @@ void displayStats(int* myLambda, int* myMu, int* myServers)
 
     cout << "\nHere are the analytical statistics:\n" << endl;
 
-    cout << "The idle time of the system:  ";
+    cout << "The percent of idle time of the system:  ";
     idleTime = getIdleTime((float)*myLambda, (float)*myMu, (float)*myServers);
     cout << idleTime << endl;
 

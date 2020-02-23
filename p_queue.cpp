@@ -244,6 +244,7 @@ void p_queue::insert(customer* newGuy)
     }
     
 }
+/*
 int main()
 {
     p_queue pq;
@@ -283,3 +284,4 @@ int main()
 
     return 0;
 }
+*/
